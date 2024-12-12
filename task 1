@@ -1,0 +1,123 @@
+#include <iostream>
+#include <queue>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <chrono>
+
+struct Process {
+    int id;
+    int arrivalTime;
+    int burstTime;
+    int remainingTime;
+    int priority;
+};
+
+void generateProcesses(std::vector<Process>& processes, int numProcesses) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> arrivalDist(0, 10);
+    std::uniform_int_distribution<> burstDist(1, 10);
+    std::uniform_int_distribution<> priorityDist(1, 5);
+
+    for (int i = 0; i < numProcesses; ++i) {
+        Process proc = {i + 1, arrivalDist(gen), burstDist(gen), 0, priorityDist(gen)};
+        proc.remainingTime = proc.burstTime;
+        processes.push_back(proc);
+    }
+}
+
+void roundRobin(std::vector<Process> processes, int timeQuantum) {
+    std::queue<Process> readyQueue;
+    int currentTime = 0;
+
+    // Сортування процесів за часом прибуття
+    std::sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        return a.arrivalTime < b.arrivalTime;
+    });
+
+    size_t index = 0;
+    while (!readyQueue.empty() || index < processes.size()) {
+        while (index < processes.size() && processes[index].arrivalTime <= currentTime) {
+            readyQueue.push(processes[index]);
+            ++index;
+        }
+
+        if (!readyQueue.empty()) {
+            Process current = readyQueue.front();
+            readyQueue.pop();
+
+            int executionTime = std::min(current.remainingTime, timeQuantum);
+            currentTime += executionTime;
+            current.remainingTime -= executionTime;
+
+            std::cout << "Process ID: " << current.id << ", Remaining Time: " << current.remainingTime << ", Current Time: " << currentTime << std::endl;
+
+            if (current.remainingTime > 0) {
+                readyQueue.push(current);
+            }
+        } else {
+            ++currentTime;
+        }
+    }
+}
+
+void fcfs(std::vector<Process> processes) {
+    std::sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        return a.arrivalTime < b.arrivalTime;
+    });
+
+    int currentTime = 0;
+    for (const auto& process : processes) {
+        int startTime = std::max(currentTime, process.arrivalTime);
+        int finishTime = startTime + process.burstTime;
+        int waitingTime = startTime - process.arrivalTime;
+
+        std::cout << "Process ID: " << process.id << ", Start Time: " << startTime
+                  << ", Finish Time: " << finishTime << ", Waiting Time: " << waitingTime << std::endl;
+
+        currentTime = finishTime;
+    }
+}
+
+void priorityScheduling(std::vector<Process> processes) {
+    std::sort(processes.begin(), processes.end(), [](const Process& a, const Process& b) {
+        return a.priority < b.priority;
+    });
+
+    int currentTime = 0;
+    for (const auto& process : processes) {
+        int startTime = std::max(currentTime, process.arrivalTime);
+        int finishTime = startTime + process.burstTime;
+
+        std::cout << "Process ID: " << process.id << ", Priority: " << process.priority
+                  << ", Start Time: " << startTime << ", Finish Time: " << finishTime << std::endl;
+
+        currentTime = finishTime;
+    }
+}
+
+int main() {
+    const int NUM_PROCESSES = 5;
+    const int TIME_QUANTUM = 3;
+    std::vector<Process> processes;
+
+    generateProcesses(processes, NUM_PROCESSES);
+
+    std::cout << "Generated Processes:" << std::endl;
+    for (const auto& process : processes) {
+        std::cout << "ID: " << process.id << ", Arrival Time: " << process.arrivalTime
+                  << ", Burst Time: " << process.burstTime << ", Priority: " << process.priority << std::endl;
+    }
+
+    std::cout << "\nRound Robin Simulation:" << std::endl;
+    roundRobin(processes, TIME_QUANTUM);
+
+    std::cout << "\nFirst-Come-First-Served (FCFS) Simulation:" << std::endl;
+    fcfs(processes);
+
+    std::cout << "\nPriority Scheduling Simulation:" << std::endl;
+    priorityScheduling(processes);
+
+    return 0;
+}
